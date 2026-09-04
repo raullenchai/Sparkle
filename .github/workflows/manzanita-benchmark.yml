@@ -1,0 +1,41 @@
+name: Manzanita benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-ui-test:
+    name: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, manzanita-standard]
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Record runner contract
+        run: |
+          sw_vers
+          xcodebuild -version
+          uname -m
+          sysctl -n hw.logicalcpu
+          sysctl -n hw.memsize
+      - name: Build unit tests
+        run: xcodebuild build-for-testing -project Sparkle.xcodeproj -scheme Distribution -enableCodeCoverage YES -derivedDataPath build
+      - name: Run unit tests
+        run: xcodebuild test-without-building -project Sparkle.xcodeproj -scheme Distribution -enableCodeCoverage YES -derivedDataPath build
+      - name: Build UI tests
+        run: xcodebuild build-for-testing -project Sparkle.xcodeproj -scheme UITests -configuration Debug -derivedDataPath build
+      - name: Run UI tests
+        run: xcodebuild test-without-building -project Sparkle.xcodeproj -scheme UITests -configuration Debug -derivedDataPath build
+
